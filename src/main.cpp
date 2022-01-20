@@ -141,28 +141,28 @@ int main(int argc, const char* argv[]) {
 #pragma warning(disable: 5043)
 extern void* 
 operator new(size_t _Size) throw() {
-	return Malloc(_Size);
+    return Malloc(_Size);
 }
  
 extern void 
 operator delete(void* _Block) throw() {
-	Mfree(_Block);
+    Mfree(_Block);
 }
  
 extern void 
 operator delete(void*  _Block, size_t _Size) throw() {
-	if (_Size > 0) {
-		::operator delete(_Block);
-	}
+    if (_Size > 0) {
+        ::operator delete(_Block);
+    }
 }
  
 extern void* 
 operator new[](size_t _Size) throw() {
-	return ::operator new(_Size);
+    return ::operator new(_Size);
 }
 
 extern void 
 operator delete[](void* _Block, size_t _Size) throw() {
-	return ::operator delete(_Block, _Size);
+    return ::operator delete(_Block, _Size);
 }
 #pragma warning(once: 5043)

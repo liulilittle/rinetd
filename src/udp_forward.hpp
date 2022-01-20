@@ -210,6 +210,7 @@ public:
                 err == boost::system::errc::no_such_file_or_directory || // ENOENT
                 err == boost::system::errc::not_a_socket              || // ENOTSOCK
                 err == boost::system::errc::no_such_device            || // ENODEV
+                err == boost::system::errc::io_error                  || // EIO
                 err == boost::system::errc::network_down              || // ENETDOWN
                 err == boost::system::errc::network_unreachable       || // ENETUNREACH
                 #ifdef EHOSTDOWN 

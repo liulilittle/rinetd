@@ -194,20 +194,20 @@ bool load_config(rinetd_config& config_, int argc, const char* argv[]) {
 }
 
 std::string get_cmd_arg_str(const char* name, int argc, const char** argv) {
-	if (argc <= 1) {
-		return "";
+    if (argc <= 1) {
+        return "";
     }
-	for (int i = 1; i < argc; i++) {
-		char* p = (char*)strstr(argv[i], name);
-		if (!p) {
-			continue;
+    for (int i = 1; i < argc; i++) {
+        char* p = (char*)strstr(argv[i], name);
+        if (!p) {
+            continue;
         }
-		p = strchr(p, '=');
-		if (!p) {
-			continue;
+        p = strchr(p, '=');
+        if (!p) {
+            continue;
         }
         else {
-		    p = 1 + p;
+            p = 1 + p;
         }
         char* l = strchr(p, ' ');
         if (!l) {
@@ -217,6 +217,6 @@ std::string get_cmd_arg_str(const char* name, int argc, const char** argv) {
             return p;
         }
         return std::string(p, l - p);
-	}
-	return "";
+    }
+    return "";
 }

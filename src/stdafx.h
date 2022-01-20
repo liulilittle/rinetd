@@ -244,31 +244,31 @@ inline std::string                                              PaddingRight(con
 }
 inline std::string                                              GetCurrentTimeText() {
     time_t rawtime;
-	struct tm* ptminfo;
+    struct tm* ptminfo;
 
-	time(&rawtime);
-	ptminfo = localtime(&rawtime);
+    time(&rawtime);
+    ptminfo = localtime(&rawtime);
 
     auto fmt = [](int source, char *dest) {
-	    if (source < 10) {
-	    	char temp[3];
-	    	strcpy(dest, "0");
-	    	sprintf(temp, "%d", source);
-	    	strcat(dest, temp);
-	    }
-	    else {
-	    	sprintf(dest, "%d", source);
+        if (source < 10) {
+            char temp[3];
+            strcpy(dest, "0");
+            sprintf(temp, "%d", source);
+            strcat(dest, temp);
+        }
+        else {
+            sprintf(dest, "%d", source);
         }
     };
 
     char yyyy[5], MM[3], dd[3], hh[3], mm[3], ss[3];
-	sprintf(yyyy, "%d", (ptminfo->tm_year + 1900));
+    sprintf(yyyy, "%d", (ptminfo->tm_year + 1900));
 
-	fmt(ptminfo->tm_mon + 1, MM);
-	fmt(ptminfo->tm_mday, dd);
-	fmt(ptminfo->tm_hour, hh);
-	fmt(ptminfo->tm_min, mm);
-	fmt(ptminfo->tm_sec, ss);
+    fmt(ptminfo->tm_mon + 1, MM);
+    fmt(ptminfo->tm_mday, dd);
+    fmt(ptminfo->tm_hour, hh);
+    fmt(ptminfo->tm_min, mm);
+    fmt(ptminfo->tm_sec, ss);
 
     std::string sb;
     sb.append(yyyy).
