@@ -84,8 +84,7 @@ public:
                     else {
                         boost::asio::async_write(*to, boost::asio::buffer(buf, sz), 
                             [self, this, socket, to, buf](const boost::system::error_code& ec, uint32_t sz) {
-                                bool success = !ec || ec == boost::system::errc::resource_unavailable_try_again; // EAGAIN
-                                if (!success) {
+                                if (ec) {
                                     abort();
                                 }
                                 else if (socket->is_open()) {
