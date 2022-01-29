@@ -82,7 +82,8 @@ do_cli(int argc, const char** argv) {
 static void
 adjust_2_max_priority() {
     #ifdef _WIN32
-    SetThreadPriority(GetCurrentProcess(), THREAD_PRIORITY_HIGHEST);
+    SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentProcess(), THREAD_PRIORITY_LOWEST);
     #else
     char path_[260];
     snprintf(path_, sizeof(path_), "/proc/%d/oom_adj", getpid());

@@ -171,11 +171,6 @@ public:
         if (server_.is_open()) {  
             boost::system::error_code ec;
             try {
-                server_.cancel(ec);
-            }
-            catch (std::exception&) {}
-            shutdown(server_.native_handle(), boost::asio::ip::tcp::acceptor::shutdown_send);
-            try {
                 server_.close(ec);
             }
             catch (std::exception&) {}
@@ -238,10 +233,6 @@ private:
     inline static void                                  close_socket(boost::asio::ip::tcp::socket& s) {
         if (s.is_open()) {  
             boost::system::error_code ec;
-            try {
-                s.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
-            }
-            catch (std::exception&) {}
             try {
                 s.close(ec);
             }
