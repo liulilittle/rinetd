@@ -234,6 +234,10 @@ private:
         if (s.is_open()) {  
             boost::system::error_code ec;
             try {
+                s.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
+            }
+            catch (std::exception&) {}
+            try {
                 s.close(ec);
             }
             catch (std::exception&) {}
