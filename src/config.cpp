@@ -118,15 +118,17 @@ parse_config(std::vector<listen_port>& out_, std::string& log_path_, const std::
         if ((local_port == 0 || local_port > 65535) || (remote_port == 0 || remote_port > 65535)) {
             continue;
         }
+
         listen_port listen_port_;
-        listen_port_.tcp_or_udp  = tcp_or_udp;
-        listen_port_.local_host  = inet_addr(local_host);
-        listen_port_.local_port  = local_port;
-        listen_port_.remote_host = inet_addr(remote_host);
-        listen_port_.remote_port = remote_port;
-        if (listen_port_.local_host == INADDR_NONE || listen_port_.remote_host == INADDR_NONE) {
+        if (!parse_address(listen_port_.local_host, local_host) ||
+            !parse_address(listen_port_.remote_host, remote_host)) {
             continue;
         }
+        
+        listen_port_.tcp_or_udp  = tcp_or_udp;
+        listen_port_.local_port  = local_port;
+        listen_port_.remote_port = remote_port;
+
         out_.push_back(std::move(listen_port_));
     }
     return out_.size() > 0;

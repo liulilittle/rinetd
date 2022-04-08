@@ -284,17 +284,7 @@ inline std::string                                              GetCurrentTimeTe
         append(ss);
     return sb;
 }
-inline std::string                                              ToAddressString(uint32_t address, uint16_t port) {
-    char sz[128]; 
-    uint8_t* p = (uint8_t*)&address;
-    sprintf(sz, "%d.%d.%d.%d:%d", p[0], p[1], p[2], p[3], port);
-    return sz;
-}
 
-template<class TProtocol>
-inline std::string                                              ToAddressString(const boost::asio::ip::basic_endpoint<TProtocol>& ep) {
-    return std::move(ep.address().to_string() + ":" + std::to_string(ep.port()));
-}
 template<typename T, typename... A> 
 inline std::shared_ptr<T>                                       make_shared_alloc(int length) {
     static_assert(sizeof(T) > 0, "can't make pointer to incomplete type");

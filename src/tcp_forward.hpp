@@ -10,6 +10,7 @@ public:
         inline tcp_connection(const std::shared_ptr<tcp_forward>& forward_, const std::shared_ptr<boost::asio::ip::tcp::socket>& socket_) 
             : enable_shared_from_this()
             , forward_(forward_)
+            , timeout_(socket_->get_executor())
             , local_socket_(socket_)
             , remote_socket_(socket_->get_executor()) {
             int sockfd = socket_->native_handle();
@@ -35,19 +36,29 @@ public:
         }
 
     public:
-        inline bool                                     run() {
+        inline bool                                         run() {
             std::shared_ptr<tcp_connection> self = shared_from_this();
             try {
                 listen_port& connect_dst_ = forward_->forward_;
-                boost::asio::ip::tcp::endpoint connectEP(
-                    boost::asio::ip::address_v4(ntohl(connect_dst_.remote_host)), connect_dst_.remote_port);
+                boost::asio::ip::tcp::endpoint connectEP = to_endpoint<boost::asio::ip::tcp>(connect_dst_.remote_host, connect_dst_.remote_port);
 
-                remote_socket_.open(boost::asio::ip::tcp::v4());
-                remote_socket_.async_connect(connectEP, [self, this](const boost::system::error_code& ec) {
-                    if (ec) {
+                boost::system::error_code ec;
+                remote_socket_.open(connectEP.protocol(), ec);
+                if (ec) {
+                    return false;
+                }
+
+                timeout_.expires_from_now(boost::posix_time::seconds(RINETD_TCP_CONNECT_TIMEOUT));
+                timeout_.async_wait([self, this](const boost::system::error_code& ec) {
+                    abort();
+                });
+                remote_socket_.async_connect(connectEP, [self, this](boost::system::error_code ec_) {
+                    if (ec_) {
+                        abort();
                         return;
                     }
 
+                    timeout_.cancel(ec_);
                     socket_to_destination(local_socket_.get(), &remote_socket_, local_socket_buf);
                     socket_to_destination(&remote_socket_, local_socket_.get(), remote_socket_buf);
 
@@ -65,16 +76,22 @@ public:
                 return false;
             }
         }   
-        inline void                                     abort() {
+        inline void                                         abort() {
+            boost::system::error_code ec_;
+            timeout_.cancel(ec_);
+            
             close_socket(remote_socket_);
             close_socket(*local_socket_.get());
         }
 
-    private:
-        inline void                                     socket_to_destination(
-            boost::asio::ip::tcp::socket*               socket, 
-            boost::asio::ip::tcp::socket*               to,
-            char*                                       buf) {
+    private:    
+        inline bool                                         socket_to_destination(
+            boost::asio::ip::tcp::socket*                   socket, 
+            boost::asio::ip::tcp::socket*                   to,
+            char*                                           buf) {
+            if (!socket->is_open()) {
+                return false;
+            }
             std::shared_ptr<tcp_connection> self = shared_from_this();
             socket->async_receive(boost::asio::buffer(buf, RINETD_BUFFER_SIZE), 
                 [self, this, socket, to, buf](const boost::system::error_code& ec, uint32_t sz) {
@@ -87,14 +104,15 @@ public:
                                 if (ec) {
                                     abort();
                                 }
-                                else if (socket->is_open()) {
+                                else {
                                     socket_to_destination(socket, to, buf);
                                 }
                             });
                     }
                 });
+            return true;
         }
-        inline void                                     wirte_log(int m_) {
+        inline void                                         wirte_log(int m_) {
             boost::asio::ip::tcp::endpoint socket_ep_;
             boost::system::error_code ec;
             try {
@@ -125,7 +143,7 @@ public:
             listen_port& connect_dst_ = forward_->forward_;
 
             std::string sb;
-            sb.append(PaddingRight(ToAddressString(socket_ep_), 21, '\x20'));
+            sb.append(PaddingRight(to_address(socket_ep_), 21, '\x20'));
             switch (m_) {
             case 1:
                 sb.append("syn  ");
@@ -137,10 +155,10 @@ public:
                 throw std::runtime_error("This operand is not supported.");
                 break;
             }
-            sb.append(PaddingRight(ToAddressString(connect_dst_.remote_host, connect_dst_.remote_port), 21, '\x20'));
+            sb.append(PaddingRight(to_address(connect_dst_.remote_host, connect_dst_.remote_port), 21, '\x20'));
             sb.append("nat ");
-            sb.append(PaddingRight(ToAddressString(nat_ep_), 21, '\x20'));
-            sb.append(ToAddressString(connect_dst_.local_host, connect_dst_.local_port));
+            sb.append(PaddingRight(to_address(nat_ep_), 21, '\x20'));
+            sb.append(to_address(connect_dst_.local_host, connect_dst_.local_port));
 
             if (forward_->log_) {
                 write_log(*forward_->log_.get(), sb);
@@ -151,13 +169,14 @@ public:
             }
         }
 
-    private:
-        std::shared_ptr<tcp_forward>                    forward_;
-        std::shared_ptr<boost::asio::ip::tcp::socket>   local_socket_;
-        boost::asio::ip::tcp::socket                    remote_socket_;
-        char                                            local_socket_buf[RINETD_BUFFER_SIZE];
-        char                                            remote_socket_buf[RINETD_BUFFER_SIZE];
-    };
+    private:    
+        std::shared_ptr<tcp_forward>                        forward_;
+        boost::asio::deadline_timer                         timeout_;
+        std::shared_ptr<boost::asio::ip::tcp::socket>       local_socket_;
+        boost::asio::ip::tcp::socket                        remote_socket_;
+        char                                                local_socket_buf[RINETD_BUFFER_SIZE];
+        char                                                remote_socket_buf[RINETD_BUFFER_SIZE];
+    };  
     inline tcp_forward(boost::asio::io_context& context_, rinetd_config& config_, listen_port& forward_, const std::shared_ptr<boost::asio::posix::stream_descriptor>& log_)
         : enable_shared_from_this()
         , context_(context_)
@@ -167,7 +186,7 @@ public:
         , log_(log_) {
         
     }
-    inline ~tcp_forward() {
+    inline ~tcp_forward() { 
         if (server_.is_open()) {  
             boost::system::error_code ec;
             try {
@@ -176,12 +195,11 @@ public:
             catch (std::exception&) {}
         }
     }
-    inline bool                                         run() {
+    inline bool                                             run() {
+        boost::asio::ip::tcp::endpoint bindEP = to_endpoint<boost::asio::ip::tcp>(forward_.local_host, forward_.local_port);
         try {
-            server_.open(boost::asio::ip::tcp::v4());
+            server_.open(bindEP.protocol());
             server_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-
-            boost::asio::ip::tcp::endpoint bindEP(boost::asio::ip::address_v4(ntohl(forward_.local_host)), forward_.local_port);
             server_.bind(bindEP);
             server_.listen(RINETD_LISTEN_BACKLOG);
 
@@ -211,8 +229,11 @@ public:
         }
     }
 
-private:
-    inline void                                         accept_socket() {
+private:    
+    inline bool                                             accept_socket() {
+        if (!server_.is_open()) {
+            return false;
+        }
         std::shared_ptr<boost::asio::ip::tcp::socket> socket = make_shared_object<boost::asio::ip::tcp::socket>(context_);
         std::shared_ptr<tcp_forward> self = shared_from_this();
         server_.async_accept(*socket.get(), [self, this, socket](boost::system::error_code ec) {
@@ -225,12 +246,11 @@ private:
                     connection_->abort();
                 }
             }
-            if (server_.is_open()) {
-                accept_socket();
-            }
+            accept_socket();
         });
+        return true;
     }
-    inline static void                                  close_socket(boost::asio::ip::tcp::socket& s) {
+    inline static void                                      close_socket(boost::asio::ip::tcp::socket& s) {
         if (s.is_open()) {  
             boost::system::error_code ec;
             try {

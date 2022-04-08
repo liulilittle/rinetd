@@ -30,12 +30,17 @@ private:
             abort();
         }
         inline bool                                         run() {
+            const boost::asio::ip::udp::endpoint& server_ = owner_->server_;
             try {
-                socket_.open(boost::asio::ip::udp::v4());
-
-                boost::asio::ip::udp::endpoint bindEP(boost::asio::ip::address_v4(0), 0);
-                socket_.bind(bindEP);
-                
+                socket_.open(server_.protocol());
+                if (server_.protocol() == boost::asio::ip::udp::v6()) {
+                    boost::asio::ip::udp::endpoint bindEP(boost::asio::ip::address_v6::any(), 0);
+                    socket_.bind(bindEP);
+                }
+                else {
+                    boost::asio::ip::udp::endpoint bindEP(boost::asio::ip::address_v4::any(), 0);
+                    socket_.bind(bindEP);
+                }
                 int sockfd = socket_.native_handle();
 
                 uint8_t tos = 0x68;
@@ -125,7 +130,7 @@ public:
         static char s_buf_[UINT16_MAX];
         
         buf_ = s_buf_;
-        server_ = boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4(ntohl(forward_.remote_host)), forward_.remote_port);
+        server_ = to_endpoint<boost::asio::ip::udp>(forward_.remote_host, forward_.remote_port);
     }
     inline ~udp_forward() {
         boost::system::error_code ec;
@@ -145,11 +150,11 @@ public:
         close_socket(socket_);
     }
     inline bool                                             run() {
+        boost::asio::ip::udp::endpoint bindEP = 
+            to_endpoint<boost::asio::ip::udp>(forward_.local_host, forward_.local_port);
         try {
-            socket_.open(boost::asio::ip::udp::v4());
+            socket_.open(bindEP.protocol());
             socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-
-            boost::asio::ip::udp::endpoint bindEP(boost::asio::ip::address_v4(ntohl(forward_.local_host)), forward_.local_port);
             socket_.bind(bindEP);
             
             int sockfd = socket_.native_handle();
@@ -247,7 +252,7 @@ private:
             });
     }
     inline std::shared_ptr<udp_tunnel>                      get_or_add_tunnel(boost::asio::ip::udp::endpoint& endpoint_) {
-        std::string key = ToAddressString(endpoint_);
+        std::string key = to_address(endpoint_);
         udp_tunnel_map::iterator it = tunnel_map_.find(key);
         if (it != tunnel_map_.end()) {
             return it->second;
