@@ -50,7 +50,9 @@ public:
 
                 timeout_.expires_from_now(boost::posix_time::seconds(RINETD_TCP_CONNECT_TIMEOUT));
                 timeout_.async_wait([self, this](const boost::system::error_code& ec) {
-                    abort();
+                    if (ec != boost::system::errc::operation_canceled) {
+                        abort();
+                    }
                 });
                 remote_socket_.async_connect(connectEP, [self, this](boost::system::error_code ec_) {
                     if (ec_) {
@@ -155,9 +157,9 @@ public:
                 throw std::runtime_error("This operand is not supported.");
                 break;
             }
-            sb.append(PaddingRight(to_address(connect_dst_.remote_host, connect_dst_.remote_port), 21, '\x20'));
+            sb.append(PaddingRight(to_address(connect_dst_.remote_host, connect_dst_.remote_port), 46, '\x20'));
             sb.append("nat ");
-            sb.append(PaddingRight(to_address(nat_ep_), 21, '\x20'));
+            sb.append(PaddingRight(to_address(nat_ep_), 46, '\x20'));
             sb.append(to_address(connect_dst_.local_host, connect_dst_.local_port));
 
             if (forward_->log_) {

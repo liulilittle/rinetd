@@ -71,7 +71,7 @@ inline bool                                             parse_address(ip_address
     }
     else if (host.is_v4()) {
         dst.bv6 = false;
-        dst.in4 = host.to_v4().to_ulong();
+        dst.in4 = *(uint32_t*)host.to_v4().to_bytes().data();
         if (dst.in4 == INADDR_NONE || dst.in4 == INADDR_NONE) {
             return false;
         }
