@@ -41,7 +41,6 @@ INCLUDE_DIRECTORIES(
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_REFERENCES_ROOT}/src
     ${PROJECT_REFERENCES_ROOT}/inc
-    ${PROJECT_REFERENCES_ROOT}/inc/jemalloc/include
 )
 
 # 设置搜索的第三库连接目录

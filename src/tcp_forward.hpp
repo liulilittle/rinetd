@@ -13,23 +13,7 @@ public:
             , timeout_(socket_->get_executor())
             , local_socket_(socket_)
             , remote_socket_(socket_->get_executor()) {
-            int sockfd = socket_->native_handle();
-
-            uint8_t tos = 0x68;
-            setsockopt(sockfd, SOL_IP, IP_TOS, (char*)&tos, sizeof(tos));
-
-            #ifdef _WIN32
-            int dont_frag = 0;
-            setsockopt(sockfd, IPPROTO_IP, IP_DONTFRAGMENT, (char*)&dont_frag, sizeof(dont_frag));
-            #elif IP_MTU_DISCOVER
-            int dont_frag = IP_PMTUDISC_WANT;
-            setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &dont_frag, sizeof(dont_frag));
-            #endif
-
-            #ifdef SO_NOSIGPIPE
-            int no_sigpipe = 1;
-            setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &no_sigpipe, sizeof(no_sigpipe));
-            #endif
+            syssocket_setsockopt(*socket_);
         }
         inline ~tcp_connection() {
             abort();
@@ -47,6 +31,7 @@ public:
                 if (ec) {
                     return false;
                 }
+                syssocket_setsockopt(remote_socket_.native_handle(), connect_dst_.remote_host.bv6 ? false : true);
 
                 timeout_.expires_from_now(boost::posix_time::seconds(RINETD_TCP_CONNECT_TIMEOUT));
                 timeout_.async_wait([self, this](const boost::system::error_code& ec) {
@@ -204,24 +189,7 @@ public:
             server_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
             server_.bind(bindEP);
             server_.listen(RINETD_LISTEN_BACKLOG);
-
-            int sockfd = server_.native_handle();
-
-            uint8_t tos = 0x68;
-            setsockopt(sockfd, SOL_IP, IP_TOS, (char*)&tos, sizeof(tos));
-
-            #ifdef _WIN32
-            int dont_frag = 0;
-            setsockopt(sockfd, IPPROTO_IP, IP_DONTFRAGMENT, (char*)&dont_frag, sizeof(dont_frag));
-            #elif IP_MTU_DISCOVER
-            int dont_frag = IP_PMTUDISC_WANT;
-            setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &dont_frag, sizeof(dont_frag));
-            #endif
-
-            #ifdef SO_NOSIGPIPE
-            int no_sigpipe = 1;
-            setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &no_sigpipe, sizeof(no_sigpipe));
-            #endif
+            syssocket_setsockopt(server_);
 
             accept_socket();
             return true;

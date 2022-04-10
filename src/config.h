@@ -81,6 +81,20 @@ inline bool                                             parse_address(ip_address
     }
     return true;
 }
+void                                                    syssocket_setsockopt(int sockfd, bool v4_or_v6);
+template<typename T>
+inline void                                             syssocket_setsockopt(T& socket) {
+    boost::system::error_code ec_;
+    auto localEP = socket.local_endpoint(ec_);
+
+    bool v4_or_v6 = false;
+    if (!ec_) {
+        v4_or_v6 = localEP.address().is_v4();
+    }
+
+    int sockfd = socket.native_handle();
+    return syssocket_setsockopt(sockfd, v4_or_v6);
+}
 bool                                                    write_log(const std::string& path_, const std::string& msg_);
 bool                                                    write_log(boost::asio::posix::stream_descriptor& log_, const std::string& msg_);
 std::shared_ptr<boost::asio::posix::stream_descriptor>  open_log(boost::asio::io_context& context_, const std::string& path_);

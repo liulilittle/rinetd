@@ -28,7 +28,6 @@
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
-#include <jemalloc/jemalloc.h>
 
 #include <boost/function.hpp>
 #include <boost/asio.hpp>
@@ -61,13 +60,13 @@ inline void*                                                    Malloc(size_t n)
     if (n == 0) {
         return NULL;
     }
-    return (void*)je_malloc(n);
+    return (void*)::malloc(n);
 }
 inline void                                                     Mfree(const void* p) {
     if (NULL == p) {
         return;
     }
-    je_free((void*)p);
+    ::free((void*)p);
 }
 inline int                                                      Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters) {
     if (str.empty()) {

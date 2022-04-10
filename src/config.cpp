@@ -222,3 +222,35 @@ std::string get_cmd_arg_str(const char* name, int argc, const char** argv) {
     }
     return "";
 }
+
+void syssocket_setsockopt(int sockfd, bool v4_or_v6) {
+    if (sockfd != -1) {
+        uint8_t tos = 0x68;
+        if (v4_or_v6) {
+            ::setsockopt(sockfd, SOL_IP, IP_TOS, (char*)&tos, sizeof(tos));
+
+            #ifdef _WIN32
+            int dont_frag = 0;
+            ::setsockopt(sockfd, IPPROTO_IP, IP_DONTFRAGMENT, (char*)&dont_frag, sizeof(dont_frag));
+            #elif IP_MTU_DISCOVER
+            int dont_frag = IP_PMTUDISC_WANT;
+            ::setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &dont_frag, sizeof(dont_frag));
+            #endif
+        }
+        else {
+            ::setsockopt(sockfd, SOL_IPV6, IP_TOS, (char*)&tos, sizeof(tos));
+
+            #ifdef _WIN32
+            int dont_frag = 0;
+            ::setsockopt(sockfd, IPPROTO_IPV6, IP_DONTFRAGMENT, (char*)&dont_frag, sizeof(dont_frag));
+            #elif IPV6_MTU_DISCOVER
+            int dont_frag = IPV6_PMTUDISC_WANT;
+            ::setsockopt(sockfd, IPPROTO_IPV6, IPV6_MTU_DISCOVER, &dont_frag, sizeof(dont_frag));
+            #endif
+        }
+        #ifdef SO_NOSIGPIPE
+        int no_sigpipe = 1;
+        ::setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &no_sigpipe, sizeof(no_sigpipe));
+        #endif
+    }
+}

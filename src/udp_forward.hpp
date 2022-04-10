@@ -41,23 +41,7 @@ private:
                     boost::asio::ip::udp::endpoint bindEP(boost::asio::ip::address_v4::any(), 0);
                     socket_.bind(bindEP);
                 }
-                int sockfd = socket_.native_handle();
-
-                uint8_t tos = 0x68;
-                setsockopt(sockfd, SOL_IP, IP_TOS, (char*)&tos, sizeof(tos));
-    
-                #ifdef _WIN32
-                int dont_frag = 0;
-                setsockopt(sockfd, IPPROTO_IP, IP_DONTFRAGMENT, (char*)&dont_frag, sizeof(dont_frag));
-                #elif IP_MTU_DISCOVER
-                int dont_frag = IP_PMTUDISC_WANT;
-                setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &dont_frag, sizeof(dont_frag));
-                #endif
-
-                #ifdef SO_NOSIGPIPE
-                int no_sigpipe = 1;
-                setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &no_sigpipe, sizeof(no_sigpipe));
-                #endif
+                syssocket_setsockopt(socket_);
 
                 next_msg();
                 return true;
@@ -156,24 +140,7 @@ public:
             socket_.open(bindEP.protocol());
             socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
             socket_.bind(bindEP);
-            
-            int sockfd = socket_.native_handle();
-
-            uint8_t tos = 0x68;
-            setsockopt(sockfd, SOL_IP, IP_TOS, (char*)&tos, sizeof(tos));
-
-            #ifdef _WIN32
-            int dont_frag = 0;
-            setsockopt(sockfd, IPPROTO_IP, IP_DONTFRAGMENT, (char*)&dont_frag, sizeof(dont_frag));
-            #elif IP_MTU_DISCOVER
-            int dont_frag = IP_PMTUDISC_WANT;
-            setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &dont_frag, sizeof(dont_frag));
-            #endif
-
-            #ifdef SO_NOSIGPIPE
-            int no_sigpipe = 1;
-            setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &no_sigpipe, sizeof(no_sigpipe));
-            #endif
+            syssocket_setsockopt(socket_);
 
             check_timer();
             accept_socket();
