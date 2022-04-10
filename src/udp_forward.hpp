@@ -71,11 +71,12 @@ private:
             std::shared_ptr<udp_tunnel> self = shared_from_this();
             socket_.async_receive_from(boost::asio::buffer(owner_->buf_, UINT16_MAX), owner_->udp_ep_, 
                 [self, this] (const boost::system::error_code& ec, uint32_t sz) {
-                    int by = bytes_transferred(ec.value(), sz);
+                    int by = std::max<int>(-1, ec ? -1 : sz);
                     if (by < 0) {
                         this->abort();
                         return;
                     }
+
                     if (by > 0) {
                         owner_->send_to(owner_->buf_, sz, local_ep_);
                     }
@@ -175,27 +176,7 @@ public:
         #else
         size_t sz = socket_.send_to(boost::asio::buffer(buf, size), endpoint_, MSG_NOSIGNAL, ec);
         #endif
-        return bytes_transferred(ec.value(), sz);
-    }
-    inline static bool                                      release_error(int err) {
-        return err == boost::system::errc::bad_file_descriptor        || // EBADF
-                err == boost::system::errc::no_such_file_or_directory || // ENOENT
-                err == boost::system::errc::not_a_socket              || // ENOTSOCK
-                err == boost::system::errc::no_such_device            || // ENODEV
-                err == boost::system::errc::io_error                  || // EIO
-                err == boost::system::errc::network_down              || // ENETDOWN
-                err == boost::system::errc::network_unreachable       || // ENETUNREACH
-                #ifdef EHOSTDOWN 
-                err == boost::system::errc::host_down                 || // EHOSTDOWN
-                #endif
-                err == boost::system::errc::host_unreachable;            // EHOSTUNREACH
-    }
-    inline static int                                       bytes_transferred(int err, size_t sz) {
-        bool b = release_error(err);
-        if (b) {
-            return -1;
-        }
-        return std::max<int>(0, sz);
+        return std::max<int>(-1, ec ? -1 : sz);
     }
 
 private:
@@ -207,12 +188,14 @@ private:
         socket_.async_receive_from(boost::asio::buffer(buf_, UINT16_MAX), udp_ep_, 
             [self, this] (const boost::system::error_code& ec, uint32_t sz) {
                 do {
-                    if (ec || sz == 0) {
+                    int by = std::max<int>(-1, ec ? -1 : sz);
+                    if (by < 1) {
                         break;
                     }
+
                     std::shared_ptr<udp_tunnel> tunnel_ = get_or_add_tunnel(udp_ep_);
                     if (tunnel_) {
-                        tunnel_->send_to(buf_, sz);
+                        tunnel_->send_to(buf_, by);
                     }
                 } while (0);
                 accept_socket();

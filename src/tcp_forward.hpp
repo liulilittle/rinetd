@@ -82,20 +82,21 @@ public:
             std::shared_ptr<tcp_connection> self = shared_from_this();
             socket->async_receive(boost::asio::buffer(buf, RINETD_BUFFER_SIZE), 
                 [self, this, socket, to, buf](const boost::system::error_code& ec, uint32_t sz) {
-                    if (ec || sz == 0) {
+                    int by = std::max<int>(-1, ec ? -1 : sz);
+                    if (by < 1) {
                         abort();
+                        return;
                     }
-                    else {
-                        boost::asio::async_write(*to, boost::asio::buffer(buf, sz), 
-                            [self, this, socket, to, buf](const boost::system::error_code& ec, uint32_t sz) {
-                                if (ec) {
-                                    abort();
-                                }
-                                else {
-                                    socket_to_destination(socket, to, buf);
-                                }
-                            });
-                    }
+
+                    boost::asio::async_write(*to, boost::asio::buffer(buf, sz), 
+                        [self, this, socket, to, buf](const boost::system::error_code& ec, uint32_t sz) {
+                            if (ec) {
+                                abort();
+                            }
+                            else {
+                                socket_to_destination(socket, to, buf);
+                            }
+                        });
                 });
             return true;
         }
