@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <stdafx.h>
 
-static int const RINETD_BUFFER_SIZE                     = 16384;
+static int const RINETD_BUFFER_SIZE                     = 65536;
 static int const RINETD_LISTEN_BACKLOG                  = 511;
 static int const RINETD_DEFAULT_UDP_TIMEOUT             = 72;
 static int const RINETD_TCP_CONNECT_TIMEOUT             = 5;
