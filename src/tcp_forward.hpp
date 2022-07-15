@@ -31,6 +31,8 @@ public:
                 if (ec) {
                     return false;
                 }
+
+                remote_socket_.set_option(boost::asio::detail::socket_option::boolean<IPPROTO_TCP, TCP_FASTOPEN>(true), ec);
                 syssocket_setsockopt(remote_socket_.native_handle(), connect_dst_.remote_host.bv6 ? false : true);
 
                 timeout_.expires_from_now(boost::posix_time::seconds(RINETD_TCP_CONNECT_TIMEOUT));
@@ -187,6 +189,10 @@ public:
         boost::asio::ip::tcp::endpoint bindEP = to_endpoint<boost::asio::ip::tcp>(forward_.local_host, forward_.local_port);
         try {
             server_.open(bindEP.protocol());
+
+            boost::system::error_code ec;
+            server_.set_option(boost::asio::detail::socket_option::boolean<IPPROTO_TCP, TCP_FASTOPEN>(true), ec);
+
             server_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
             server_.bind(bindEP);
             server_.listen(RINETD_LISTEN_BACKLOG);
